@@ -20,7 +20,12 @@ const app = express();
 
 connectDB();
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false, // 🔥 allow cross-origin images, scripts, etc.
+  })
+);
+
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true

@@ -21,7 +21,7 @@ const subscriberSchema = new mongoose.Schema({
   timestamps: true
 });
 
-subscriberSchema.index({ email: 1 }, { unique: true });
+//subscriberSchema.index({ email: 1 }, { unique: true });
 subscriberSchema.index({ isActive: 1 });
 
 const Subscriber = mongoose.model('Subscriber', subscriberSchema);
