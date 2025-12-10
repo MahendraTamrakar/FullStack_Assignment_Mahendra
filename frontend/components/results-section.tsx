@@ -24,7 +24,7 @@ export function ResultsSection() {
           {/* Left Image */}
           <div className="relative h-80 md:h-96 bg-slate-100 rounded-lg overflow-hidden shadow-md order-2 md:order-1">
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
-              <img src="/images/section.png" alt="section image" />
+              <img src="/images/section.jpg" alt="section image"/>
             </div>
           </div>
 
