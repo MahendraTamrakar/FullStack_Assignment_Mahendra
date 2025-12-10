@@ -1,17 +1,34 @@
+// src/controllers/admin.controller.js
 import Project from '../models/project.model.js';
 import Client from '../models/client.model.js';
 import ContactSubmission from '../models/contactSubmission.js';
 import Subscriber from '../models/subscriber.js';
 import { uploadToCloudinary, deleteFromCloudinary } from '../utils/cloudinaryUpload.js';
 
+/**
+ * Helper to safely extract uploaded image result
+ * Returns { imageUrl, imagePublicId }
+ */
+const handleUploadIfPresent = async (file, folder) => {
+  if (!file || !file.buffer) return { imageUrl: '', imagePublicId: '' };
+  const result = await uploadToCloudinary(file.buffer, folder);
+  return {
+    imageUrl: result.secure_url || result.url || '',
+    imagePublicId: result.public_id || '',
+  };
+};
+
 export const addProject = async (req, res, next) => {
   try {
     const { projectName, description } = req.body;
     let imageUrl = req.body.imageUrl || '';
+    let imagePublicId = req.body.imagePublicId || '';
 
     // Upload to Cloudinary if file exists
     if (req.file) {
-      imageUrl = await uploadToCloudinary(req.file, 'projects');
+      const uploadResult = await handleUploadIfPresent(req.file, 'projects');
+      imageUrl = uploadResult.imageUrl;
+      imagePublicId = uploadResult.imagePublicId;
     }
 
     if (!projectName || !description || !imageUrl) {
@@ -25,6 +42,7 @@ export const addProject = async (req, res, next) => {
       projectName,
       description,
       imageUrl,
+      imagePublicId,
     });
 
     res.status(201).json({
@@ -49,10 +67,13 @@ export const addClient = async (req, res, next) => {
   try {
     const { clientName, clientDescription, clientDesignation } = req.body;
     let imageUrl = req.body.imageUrl || '';
+    let imagePublicId = req.body.imagePublicId || '';
 
     // Upload to Cloudinary if file exists
     if (req.file) {
-      imageUrl = await uploadToCloudinary(req.file, 'clients');
+      const uploadResult = await handleUploadIfPresent(req.file, 'clients');
+      imageUrl = uploadResult.imageUrl;
+      imagePublicId = uploadResult.imagePublicId;
     }
 
     if (!clientName || !clientDescription || !clientDesignation || !imageUrl) {
@@ -64,6 +85,7 @@ export const addClient = async (req, res, next) => {
 
     const client = await Client.create({
       imageUrl,
+      imagePublicId,
       clientName,
       clientDescription,
       clientDesignation
@@ -99,8 +121,10 @@ export const deleteProject = async (req, res, next) => {
       });
     }
 
-    // Delete image from Cloudinary
-    if (project.imageUrl && project.imageUrl.includes('cloudinary.com')) {
+    // Delete image from Cloudinary using public id if stored, otherwise try url
+    if (project.imagePublicId) {
+      await deleteFromCloudinary(project.imagePublicId);
+    } else if (project.imageUrl && project.imageUrl.includes('cloudinary.com')) {
       await deleteFromCloudinary(project.imageUrl);
     }
 
@@ -128,7 +152,9 @@ export const deleteClient = async (req, res, next) => {
     }
 
     // Delete image from Cloudinary
-    if (client.imageUrl && client.imageUrl.includes('cloudinary.com')) {
+    if (client.imagePublicId) {
+      await deleteFromCloudinary(client.imagePublicId);
+    } else if (client.imageUrl && client.imageUrl.includes('cloudinary.com')) {
       await deleteFromCloudinary(client.imageUrl);
     }
 
@@ -157,13 +183,18 @@ export const updateProject = async (req, res, next) => {
     }
 
     let imageUrl = project.imageUrl;
+    let imagePublicId = project.imagePublicId;
 
     // If new image uploaded, delete old one and upload new
     if (req.file) {
-      if (project.imageUrl && project.imageUrl.includes('cloudinary.com')) {
-        await deleteFromCloudinary(project.imageUrl);
+      if (imagePublicId) {
+        await deleteFromCloudinary(imagePublicId);
+      } else if (imageUrl && imageUrl.includes('cloudinary.com')) {
+        await deleteFromCloudinary(imageUrl);
       }
-      imageUrl = await uploadToCloudinary(req.file, 'projects');
+      const uploadResult = await handleUploadIfPresent(req.file, 'projects');
+      imageUrl = uploadResult.imageUrl;
+      imagePublicId = uploadResult.imagePublicId;
     }
 
     const updatedProject = await Project.findByIdAndUpdate(
@@ -171,7 +202,8 @@ export const updateProject = async (req, res, next) => {
       { 
         ...(projectName && { projectName }),
         ...(description && { description }),
-        imageUrl
+        imageUrl,
+        imagePublicId,
       },
       { new: true, runValidators: true }
     );
@@ -200,13 +232,18 @@ export const updateClient = async (req, res, next) => {
     }
 
     let imageUrl = client.imageUrl;
+    let imagePublicId = client.imagePublicId;
 
     // If new image uploaded, delete old one and upload new
     if (req.file) {
-      if (client.imageUrl && client.imageUrl.includes('cloudinary.com')) {
-        await deleteFromCloudinary(client.imageUrl);
+      if (imagePublicId) {
+        await deleteFromCloudinary(imagePublicId);
+      } else if (imageUrl && imageUrl.includes('cloudinary.com')) {
+        await deleteFromCloudinary(imageUrl);
       }
-      imageUrl = await uploadToCloudinary(req.file, 'clients');
+      const uploadResult = await handleUploadIfPresent(req.file, 'clients');
+      imageUrl = uploadResult.imageUrl;
+      imagePublicId = uploadResult.imagePublicId;
     }
 
     const updatedClient = await Client.findByIdAndUpdate(
@@ -215,7 +252,8 @@ export const updateClient = async (req, res, next) => {
         ...(clientName && { clientName }),
         ...(clientDescription && { clientDescription }),
         ...(clientDesignation && { clientDesignation }),
-        imageUrl
+        imageUrl,
+        imagePublicId,
       },
       { new: true, runValidators: true }
     );
