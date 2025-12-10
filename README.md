@@ -444,6 +444,7 @@ backend/
 ├── package.json
 ├── server.js
 └── README.md
+
 Environment Variables
 VariableDescriptionDefaultPORTServer port5000MONGODB_URIMongoDB connection string-CLIENT_URLFrontend URL for CORShttp://localhost:3000NODE_ENVEnvironment modedevelopmentIMAGE_WIDTHProcessed image width450IMAGE_HEIGHTProcessed image height350IMAGE_QUALITYJPEG quality (1-100)90MAX_FILE_SIZEMax upload size in bytes5242880 (5MB)
 Scripts
