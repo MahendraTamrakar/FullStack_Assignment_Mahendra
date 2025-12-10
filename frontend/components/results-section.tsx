@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image";
 
 export function ResultsSection() {
   return (
@@ -23,7 +24,7 @@ export function ResultsSection() {
           {/* Left Image */}
           <div className="relative h-80 md:h-96 bg-slate-100 rounded-lg overflow-hidden shadow-md order-2 md:order-1">
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
-              <span className="text-slate-400 text-center">Results Image</span>
+              <img src="/images/section.png" alt="section image" />
             </div>
           </div>
 
