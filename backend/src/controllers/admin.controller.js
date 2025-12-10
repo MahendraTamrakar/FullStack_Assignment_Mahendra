@@ -2,21 +2,22 @@ import Project from '../models/project.model.js';
 import Client from '../models/client.model.js';
 import ContactSubmission from '../models/contactSubmission.js';
 import Subscriber from '../models/subscriber.js';
-import { processUploadedImage } from '../utils/imageProcessor.js';
+import { uploadToCloudinary, deleteFromCloudinary } from '../utils/cloudinaryUpload.js';
 
 export const addProject = async (req, res, next) => {
   try {
     const { projectName, description } = req.body;
     let imageUrl = req.body.imageUrl || '';
 
+    // Upload to Cloudinary if file exists
     if (req.file) {
-      imageUrl = await processUploadedImage(req.file, 'project');
+      imageUrl = await uploadToCloudinary(req.file, 'projects');
     }
 
     if (!projectName || !description || !imageUrl) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields'
+        message: 'Please provide all required fields (projectName, description, image)'
       });
     }
 
@@ -49,14 +50,15 @@ export const addClient = async (req, res, next) => {
     const { clientName, clientDescription, clientDesignation } = req.body;
     let imageUrl = req.body.imageUrl || '';
 
+    // Upload to Cloudinary if file exists
     if (req.file) {
-      imageUrl = await processUploadedImage(req.file, 'client');
+      imageUrl = await uploadToCloudinary(req.file, 'clients');
     }
 
     if (!clientName || !clientDescription || !clientDesignation || !imageUrl) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields'
+        message: 'Please provide all required fields (clientName, clientDescription, clientDesignation, image)'
       });
     }
 
@@ -81,6 +83,149 @@ export const addClient = async (req, res, next) => {
         errors
       });
     }
+    next(error);
+  }
+};
+
+export const deleteProject = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found'
+      });
+    }
+
+    // Delete image from Cloudinary
+    if (project.imageUrl && project.imageUrl.includes('cloudinary.com')) {
+      await deleteFromCloudinary(project.imageUrl);
+    }
+
+    await Project.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Project deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteClient = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const client = await Client.findById(id);
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found'
+      });
+    }
+
+    // Delete image from Cloudinary
+    if (client.imageUrl && client.imageUrl.includes('cloudinary.com')) {
+      await deleteFromCloudinary(client.imageUrl);
+    }
+
+    await Client.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Client deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProject = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { projectName, description } = req.body;
+    
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found'
+      });
+    }
+
+    let imageUrl = project.imageUrl;
+
+    // If new image uploaded, delete old one and upload new
+    if (req.file) {
+      if (project.imageUrl && project.imageUrl.includes('cloudinary.com')) {
+        await deleteFromCloudinary(project.imageUrl);
+      }
+      imageUrl = await uploadToCloudinary(req.file, 'projects');
+    }
+
+    const updatedProject = await Project.findByIdAndUpdate(
+      id,
+      { 
+        ...(projectName && { projectName }),
+        ...(description && { description }),
+        imageUrl
+      },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Project updated successfully',
+      data: updatedProject
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateClient = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { clientName, clientDescription, clientDesignation } = req.body;
+    
+    const client = await Client.findById(id);
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found'
+      });
+    }
+
+    let imageUrl = client.imageUrl;
+
+    // If new image uploaded, delete old one and upload new
+    if (req.file) {
+      if (client.imageUrl && client.imageUrl.includes('cloudinary.com')) {
+        await deleteFromCloudinary(client.imageUrl);
+      }
+      imageUrl = await uploadToCloudinary(req.file, 'clients');
+    }
+
+    const updatedClient = await Client.findByIdAndUpdate(
+      id,
+      { 
+        ...(clientName && { clientName }),
+        ...(clientDescription && { clientDescription }),
+        ...(clientDesignation && { clientDesignation }),
+        imageUrl
+      },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Client updated successfully',
+      data: updatedClient
+    });
+  } catch (error) {
     next(error);
   }
 };
@@ -151,7 +296,7 @@ export const updateContactStatus = async (req, res, next) => {
     if (!['new', 'read', 'responded'].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid status value'
+        message: 'Invalid status value. Must be: new, read, or responded'
       });
     }
 
